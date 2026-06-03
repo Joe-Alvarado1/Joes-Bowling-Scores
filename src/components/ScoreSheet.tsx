@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { calculateBowlingScore, validateFrames } from '../utils/scoring';
 import { FrameInput } from '../types';
+import { applyRollEntry } from './ScoreSheet.helpers';
 
 const initialFrames: FrameInput[] = Array.from({ length: 10 }, (_, index) => ({
   rolls: index === 9 ? ['', '', ''] : ['', ''],
@@ -9,7 +10,7 @@ const initialFrames: FrameInput[] = Array.from({ length: 10 }, (_, index) => ({
 
 const frameLabel = (index: number) => `${index + 1}`;
 
-const normalizeRollEntry = (value: string, frameIndex: number, rollIndex: number, frame: FrameInput) => {
+export const normalizeRollEntry = (value: string, frameIndex: number, rollIndex: number, frame: FrameInput) => {
   const raw = value.toUpperCase().trim();
   if (!raw) {
     return '';
@@ -61,21 +62,7 @@ const ScoreSheet = () => {
   const { total, frameScores } = useMemo(() => calculateBowlingScore(frames), [frames]);
 
   const updateRoll = (frameIndex: number, rollIndex: number, value: string) => {
-    const nextFrames = frames.map((frame) => ({ rolls: [...frame.rolls] }));
-    const normalized = normalizeRollEntry(value, frameIndex, rollIndex, nextFrames[frameIndex]);
-
-    if (frameIndex < 9 && normalized === 'X') {
-      nextFrames[frameIndex].rolls[0] = '';
-      nextFrames[frameIndex].rolls[1] = 'X';
-    } else {
-      nextFrames[frameIndex].rolls[rollIndex] = normalized;
-    }
-
-    if (frameIndex < 9 && rollIndex === 0 && normalized === '') {
-      nextFrames[frameIndex].rolls[1] = '';
-    }
-
-    setFrames(nextFrames);
+    setFrames((currentFrames) => applyRollEntry(currentFrames, frameIndex, rollIndex, value));
   };
 
   const reset = () => {

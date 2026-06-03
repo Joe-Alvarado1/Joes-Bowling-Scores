@@ -4,12 +4,14 @@
     "module": "esnext",
     "jsx": "react-jsx",
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "noEmit": true,
+    "ignoreDeprecations": "6.0",
+    "types": ["jest"],
     "baseUrl": ".",
     "paths": {
       "@/*": [
