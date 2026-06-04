@@ -32,6 +32,9 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Debug TypeScript version
+        run: npx tsc -v
+
       - name: Build Expo web production bundle
         env:
           CI: true
