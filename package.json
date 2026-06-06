@@ -24,10 +24,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
     "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.1",
     "@types/react": "19.2.16",
     "@typescript-eslint/eslint-plugin": "^8.60.1",
     "@typescript-eslint/parser": "^8.60.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "jest": "^30.4.2",

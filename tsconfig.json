@@ -14,7 +14,7 @@
     "resolveJsonModule": true,
     "noEmit": true,
 
-    "types": ["jest"],
+    "types": ["jest", "node"],
 
     "paths": {
       "@/*": ["./src/*"]

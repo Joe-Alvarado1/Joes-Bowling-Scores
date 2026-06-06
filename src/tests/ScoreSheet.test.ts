@@ -21,12 +21,12 @@ describe('ScoreSheet helpers', () => {
     expect(nextFrames[0].rolls[1]).toBe('');
   });
 
-  it('moves a strike entered in the first roll to the second roll for the 10th frame', () => {
+  it('a strike rolled on the first roll of the 10th frame should stay in the first roll', () => {
     const frames = createEmptyFrames();
     const nextFrames = applyRollEntry(frames, 9, 0, 'X');
 
-    expect(nextFrames[9].rolls[0]).toBe('');
-    expect(nextFrames[9].rolls[1]).toBe('X');
+    expect(nextFrames[9].rolls[0]).toBe('X');
+    expect(nextFrames[9].rolls[1]).toBe('');
   });
 
   it('allows numeric entries in the first roll for the 10th frame', () => {
