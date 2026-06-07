@@ -1,5 +1,14 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputKeyPressEventData,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { calculateBowlingScore, validateFrames } from '../utils/scoring';
 import { FrameInput } from '../types';
 import {
@@ -41,16 +50,14 @@ const ScoreSheet = () => {
   const { total, frameScores } = useMemo(() => calculateBowlingScore(frames), [frames]);
 
   const queueFocus = (fIndex: number, rIndex: number) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const ref = inputRefs.current?.[fIndex]?.[rIndex];
-        try {
-          ref?.focus?.();
-        } catch {
-          // ignore
-        }
-      });
-    });
+  setTimeout(() => {
+    const ref = inputRefs.current?.[fIndex]?.[rIndex];
+    try {
+      ref?.focus?.();
+    } catch {
+      // ignore
+    }
+  }, 30);
   };
 
   const focusInput = (fIndex: number, rIndex: number) => {
@@ -157,14 +164,14 @@ const ScoreSheet = () => {
   };
 
   const reset = () => {
-    pendingFocusRef.current = null;
-    setFrames(initialFrames);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        focusInput(0, 0);
-      });
-    });
-  };
+  pendingFocusRef.current = null;
+  setFrames(initialFrames);
+  queueFocus(0, 0);
+};
+
+  useEffect(() => {
+    queueFocus(0, 0);
+  }, []);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -210,7 +217,9 @@ const ScoreSheet = () => {
                       autoCapitalize="characters"
                       value={getDisplayRoll(frame, frameIndex, 0)}
                       onChangeText={(text: string) => handleRollEntry(frameIndex, 0, text)}
-                      onKeyPress={(e: any) => handleKeyPress(e.nativeEvent?.key, frameIndex, 0)}
+                      onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) =>
+  handleKeyPress(e.nativeEvent.key, frameIndex, 0)
+}
                       placeholder=""
                       maxLength={1}
                     />
@@ -226,7 +235,9 @@ const ScoreSheet = () => {
                       autoCapitalize="characters"
                       value={getDisplayRoll(frame, frameIndex, 1)}
                       onChangeText={(text: string) => handleRollEntry(frameIndex, 1, text)}
-                      onKeyPress={(e: any) => handleKeyPress(e.nativeEvent?.key, frameIndex, 1)}
+                      onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) =>
+  handleKeyPress(e.nativeEvent.key, frameIndex, 1)
+}
                       placeholder=""
                       maxLength={1}
                     />
@@ -244,7 +255,9 @@ const ScoreSheet = () => {
                       autoCapitalize="characters"
                       value={getDisplayRoll(frame, frameIndex, 2)}
                       onChangeText={(text: string) => handleRollEntry(frameIndex, 2, text)}
-                      onKeyPress={(e: any) => handleKeyPress(e.nativeEvent?.key, frameIndex, 2)}
+                      onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) =>
+  handleKeyPress(e.nativeEvent.key, frameIndex, 2)
+}
                       placeholder=""
                       maxLength={1}
                     />
