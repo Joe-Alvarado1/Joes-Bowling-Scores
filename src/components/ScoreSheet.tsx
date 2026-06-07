@@ -1,18 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { calculateBowlingScore, validateFrames } from '../utils/scoring';
 import { FrameInput } from '../types';
-import { applyRollEntry } from './ScoreSheet.helpers';
+import {
+  applyRollEntry,
+  isStrikeFrame,
+  isFrameComplete,
+  normalizeRollValue,
+} from './ScoreSheet.helpers';
 
 const initialFrames: FrameInput[] = Array.from({ length: 10 }, (_, index) => ({
   rolls: index === 9 ? ['', '', ''] : ['', ''],
 }));
 
 const frameLabel = (index: number) => `${index + 1}`;
-
-const isStrikeFrame = (frame: FrameInput, frameIndex: number) => {
-  return frameIndex < 9 && frame.rolls[1]?.toUpperCase() === 'X' && !frame.rolls[0]?.trim();
-};
 
 const getDisplayRoll = (frame: FrameInput, frameIndex: number, rollIndex: number): string => {
   if (frameIndex < 9) {
@@ -29,70 +30,228 @@ const getDisplayRoll = (frame: FrameInput, frameIndex: number, rollIndex: number
 
 const ScoreSheet = () => {
   const [frames, setFrames] = useState<FrameInput[]>(initialFrames);
+
+  const inputRefs = useRef<Array<Array<TextInput | null>>>(
+    Array.from({ length: 10 }, () => Array.from({ length: 3 }, () => null))
+  );
+
+  const pendingFocusRef = useRef<{ frameIndex: number; rollIndex: number } | null>(null);
+
   const validationMessage = useMemo(() => validateFrames(frames), [frames]);
   const { total, frameScores } = useMemo(() => calculateBowlingScore(frames), [frames]);
 
-  const updateRoll = (frameIndex: number, rollIndex: number, value: string) => {
-    setFrames((currentFrames) => applyRollEntry(currentFrames, frameIndex, rollIndex, value));
+  const queueFocus = (fIndex: number, rIndex: number) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const ref = inputRefs.current?.[fIndex]?.[rIndex];
+        try {
+          ref?.focus?.();
+        } catch {
+          // ignore
+        }
+      });
+    });
+  };
+
+  const focusInput = (fIndex: number, rIndex: number) => {
+    const ref = inputRefs.current?.[fIndex]?.[rIndex];
+    try {
+      ref?.focus?.();
+    } catch {
+      // ignore
+    }
+  };
+
+  const getPrevPosition = (frameIndex: number, rollIndex: number) => {
+    if (rollIndex > 0) {
+      return { frameIndex, rollIndex: rollIndex - 1 };
+    }
+
+    if (frameIndex > 0) {
+      const prevFrameIndex = frameIndex - 1;
+      const prevRollIndex = prevFrameIndex === 9 ? 2 : 1;
+      return { frameIndex: prevFrameIndex, rollIndex: prevRollIndex };
+    }
+
+    return null;
+  };
+
+  const handleRollEntry = (frameIndex: number, rollIndex: number, rawValue: string) => {
+    setFrames((currentFrames) => {
+      const nextFrames = applyRollEntry(currentFrames, frameIndex, rollIndex, rawValue);
+      const nextFrame = nextFrames[frameIndex];
+
+      let nextFocus: { frameIndex: number; rollIndex: number } | null = null;
+
+      if (frameIndex < 9) {
+        const strike = isStrikeFrame(nextFrame, frameIndex);
+        const complete = isFrameComplete(nextFrame, frameIndex);
+        const first = normalizeRollValue(nextFrame.rolls[0] ?? '');
+
+        if (strike || complete) {
+          if (frameIndex < 9) {
+            nextFocus = { frameIndex: frameIndex + 1, rollIndex: 0 };
+          }
+        } else if (rollIndex === 0 && first !== '') {
+          nextFocus = { frameIndex, rollIndex: 1 };
+        }
+      } else {
+        const complete = isFrameComplete(nextFrame, frameIndex);
+
+        if (!complete) {
+          if (rollIndex === 0) {
+            nextFocus = { frameIndex, rollIndex: 1 };
+          } else if (rollIndex === 1) {
+            nextFocus = { frameIndex, rollIndex: 2 };
+          }
+        }
+      }
+
+      pendingFocusRef.current = nextFocus;
+      return nextFrames;
+    });
+  };
+
+  const handleBackspace = (frameIndex: number, rollIndex: number) => {
+    const currentDisplayValue = getDisplayRoll(frames[frameIndex], frameIndex, rollIndex);
+
+    // If current box is already empty, jump to previous box
+    if ((currentDisplayValue ?? '') === '') {
+      const prev = getPrevPosition(frameIndex, rollIndex);
+      if (prev) {
+        queueFocus(prev.frameIndex, prev.rollIndex);
+      }
+      return;
+    }
+
+    // If current box has content, clearing is handled by TextInput itself.
+    // A second backspace on the now-empty box will move focus to previous.
+  };
+
+  const handleKeyPress = (key: string, frameIndex: number, rollIndex: number) => {
+    const leftKeys = ['ArrowLeft', 'Left'];
+    const rightKeys = ['ArrowRight', 'Right'];
+
+    if (key === 'Backspace') {
+      handleBackspace(frameIndex, rollIndex);
+      return;
+    }
+
+    if (rightKeys.includes(key)) {
+      const maxRoll = frameIndex === 9 ? 2 : 1;
+      if (rollIndex < maxRoll) {
+        queueFocus(frameIndex, rollIndex + 1);
+      } else if (frameIndex < 9) {
+        queueFocus(frameIndex + 1, 0);
+      }
+    }
+
+    if (leftKeys.includes(key)) {
+      if (rollIndex > 0) {
+        queueFocus(frameIndex, rollIndex - 1);
+      } else if (frameIndex > 0) {
+        const prevMaxRoll = frameIndex - 1 === 9 ? 2 : 1;
+        queueFocus(frameIndex - 1, prevMaxRoll);
+      }
+    }
   };
 
   const reset = () => {
+    pendingFocusRef.current = null;
     setFrames(initialFrames);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        focusInput(0, 0);
+      });
+    });
   };
+
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        focusInput(0, 0);
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (pendingFocusRef.current) {
+      const { frameIndex, rollIndex } = pendingFocusRef.current;
+      pendingFocusRef.current = null;
+      queueFocus(frameIndex, rollIndex);
+    }
+  }, [frames]);
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
       <Text style={styles.title}>Bowling Score Sheet</Text>
-      <Text style={styles.subtitle}>Use X for strikes and / for spares, or enter pin counts.</Text>
+      <Text style={styles.subtitle}>Use X for strikes, / for spares, and 0 will display as -.</Text>
 
       <ScrollView horizontal contentContainerStyle={styles.sheetRow} showsHorizontalScrollIndicator={false}>
         {frames.map((frame, frameIndex) => {
           const isTenth = frameIndex === 9;
+
           return (
             <View
               key={frameIndex}
               style={[styles.frameBox, isTenth && styles.tenthFrameBox, frameIndex !== 0 && styles.frameDivider]}
             >
               <Text style={styles.frameNumber}>{frameLabel(frameIndex)}</Text>
+
               <View style={styles.frameTopRow}>
                 <View style={styles.topRollsRow}>
                   <View style={styles.smallRollBox}>
                     <TextInput
+                      ref={(el) => {
+                        inputRefs.current[frameIndex][0] = el;
+                      }}
                       style={styles.rollInput}
                       keyboardType="default"
                       autoCapitalize="characters"
                       value={getDisplayRoll(frame, frameIndex, 0)}
-                      onChangeText={(text: string) => updateRoll(frameIndex, 0, text)}
+                      onChangeText={(text: string) => handleRollEntry(frameIndex, 0, text)}
+                      onKeyPress={(e: any) => handleKeyPress(e.nativeEvent?.key, frameIndex, 0)}
                       placeholder=""
                       maxLength={1}
                     />
                   </View>
+
                   <View style={[styles.smallRollBox, styles.smallRollBoxRight]}>
                     <TextInput
+                      ref={(el) => {
+                        inputRefs.current[frameIndex][1] = el;
+                      }}
                       style={styles.rollInput}
                       keyboardType="default"
                       autoCapitalize="characters"
                       value={getDisplayRoll(frame, frameIndex, 1)}
-                      onChangeText={(text: string) => updateRoll(frameIndex, 1, text)}
+                      onChangeText={(text: string) => handleRollEntry(frameIndex, 1, text)}
+                      onKeyPress={(e: any) => handleKeyPress(e.nativeEvent?.key, frameIndex, 1)}
                       placeholder=""
                       maxLength={1}
                     />
                   </View>
                 </View>
+
                 {isTenth ? (
                   <View style={styles.thirdRollBox}>
                     <TextInput
+                      ref={(el) => {
+                        inputRefs.current[frameIndex][2] = el;
+                      }}
                       style={styles.rollInput}
                       keyboardType="default"
                       autoCapitalize="characters"
                       value={getDisplayRoll(frame, frameIndex, 2)}
-                      onChangeText={(text: string) => updateRoll(frameIndex, 2, text)}
+                      onChangeText={(text: string) => handleRollEntry(frameIndex, 2, text)}
+                      onKeyPress={(e: any) => handleKeyPress(e.nativeEvent?.key, frameIndex, 2)}
                       placeholder=""
                       maxLength={1}
                     />
                   </View>
                 ) : null}
               </View>
+
               <View style={styles.frameScoreBox}>
                 <Text style={styles.frameScoreText}>{frameScores[frameIndex]?.cumulative ?? ''}</Text>
               </View>
@@ -201,7 +360,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: '#1f2937',
   },
-  /* frameDivider removed; vertical lines come from inner roll box borders */
   thirdRollBox: {
     width: 28,
     height: 36,
