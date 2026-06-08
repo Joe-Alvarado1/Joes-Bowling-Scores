@@ -8,8 +8,8 @@
       "android",
       "web"
     ],
-    "plugins": [
-      "expo-status-bar"
-    ]
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    }
   }
 }
