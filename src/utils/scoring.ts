@@ -1,6 +1,6 @@
 import { FrameInput, FrameScore } from '../types';
 
-const parseRawRoll = (value: string): number | 'X' | '/' | null => {
+const parseRawRoll = (value: string): number | 'X' | '/' | '-' | null => {
   const normalized = value.trim().toUpperCase();
   if (!normalized) {
     return null;
@@ -10,6 +10,9 @@ const parseRawRoll = (value: string): number | 'X' | '/' | null => {
   }
   if (normalized === '/') {
     return '/';
+  }
+  if (normalized === '-') {
+    return '-';
   }
   const parsed = Number(normalized);
   if (Number.isNaN(parsed)) {
@@ -40,6 +43,10 @@ const parseRollValue = (rolls: string[], index: number): number | null => {
       return null;
     }
     return 10 - previous;
+  }
+
+  if (raw === '-') {
+    return 0;
   }
 
   return raw;
