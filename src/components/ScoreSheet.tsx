@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { calculateBowlingScore, validateFrames } from '../utils/scoring';
+import { calculateBowlingScore, getEntryValidationMessage, validateFrames } from '../utils/scoring';
 import { FrameInput } from '../types';
 import {
   applyRollEntry,
@@ -27,17 +27,18 @@ const getDisplayRoll = (frame: FrameInput, frameIndex: number, rollIndex: number
   if (frameIndex < 9) {
     const strike = isStrikeFrame(frame, frameIndex);
     if (rollIndex === 0) {
-      return strike ? '' : frame.rolls[0] ?? '';
+      return strike ? '' : (frame.rolls[0] ?? '').replace(/^0$/, '-');
     }
     if (rollIndex === 1) {
-      return strike ? 'X' : frame.rolls[1] ?? '';
+      return strike ? 'X' : (frame.rolls[1] ?? '').replace(/^0$/, '-');
     }
   }
-  return frame.rolls[rollIndex] ?? '';
+  return (frame.rolls[rollIndex] ?? '').replace(/^0$/, '-');
 };
 
 const ScoreSheet = () => {
   const [frames, setFrames] = useState<FrameInput[]>(initialFrames);
+  const [entryValidationMessage, setEntryValidationMessage] = useState<string | null>(null);
 
   const inputRefs = useRef<Array<Array<TextInput | null>>>(
     Array.from({ length: 10 }, () => Array.from({ length: 3 }, () => null))
@@ -46,6 +47,7 @@ const ScoreSheet = () => {
   const pendingFocusRef = useRef<{ frameIndex: number; rollIndex: number } | null>(null);
 
   const validationMessage = useMemo(() => validateFrames(frames), [frames]);
+  const displayValidationMessage = entryValidationMessage ?? validationMessage;
   const { total, frameScores } = useMemo(() => calculateBowlingScore(frames), [frames]);
 
   const queueFocus = (fIndex: number, rIndex: number) => {
@@ -83,28 +85,32 @@ const ScoreSheet = () => {
   };
 
   const handleRollEntry = (frameIndex: number, rollIndex: number, rawValue: string) => {
+    const nextValidationMessage = getEntryValidationMessage(frames, frameIndex, rollIndex, rawValue);
+    setEntryValidationMessage(nextValidationMessage);
+
     setFrames((currentFrames) => {
       const nextFrames = applyRollEntry(currentFrames, frameIndex, rollIndex, rawValue);
       const nextFrame = nextFrames[frameIndex];
 
       let nextFocus: { frameIndex: number; rollIndex: number } | null = null;
+      const shouldAdvance = rawValue !== '' && nextValidationMessage === null && nextFrames !== currentFrames;
 
       if (frameIndex < 9) {
         const strike = isStrikeFrame(nextFrame, frameIndex);
         const complete = isFrameComplete(nextFrame, frameIndex);
         const first = normalizeRollValue(nextFrame.rolls[0] ?? '');
 
-        if (strike || complete) {
+        if (shouldAdvance && (strike || complete)) {
           if (frameIndex < 9) {
             nextFocus = { frameIndex: frameIndex + 1, rollIndex: 0 };
           }
-        } else if (rollIndex === 0 && first !== '') {
+        } else if (shouldAdvance && rollIndex === 0 && first !== '') {
           nextFocus = { frameIndex, rollIndex: 1 };
         }
       } else {
         const complete = isFrameComplete(nextFrame, frameIndex);
 
-        if (!complete) {
+        if (shouldAdvance && !complete) {
           if (rollIndex === 0) {
             nextFocus = { frameIndex, rollIndex: 1 };
           } else if (rollIndex === 1) {
@@ -163,10 +169,11 @@ const ScoreSheet = () => {
   };
 
   const reset = () => {
-  pendingFocusRef.current = null;
-  setFrames(initialFrames);
-  queueFocus(0, 0);
-};
+    pendingFocusRef.current = null;
+    setEntryValidationMessage(null);
+    setFrames(initialFrames);
+    queueFocus(0, 0);
+  };
 
   useEffect(() => {
     queueFocus(0, 0);
@@ -272,8 +279,8 @@ const getInputHandlers = (frameIndex: number, rollIndex: number) => {
 
       <View style={styles.summaryCard}>
         <Text style={styles.summaryLabel}>Total Score</Text>
-        <Text style={styles.summaryValue}>{validationMessage ? '--' : total}</Text>
-        {validationMessage ? <Text style={styles.validation}>{validationMessage}</Text> : null}
+        <Text style={styles.summaryValue}>{displayValidationMessage ? '--' : total}</Text>
+        {displayValidationMessage ? <Text style={styles.validation}>{displayValidationMessage}</Text> : null}
       </View>
 
       <TouchableOpacity onPress={reset} style={styles.button} activeOpacity={0.8}>

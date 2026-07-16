@@ -52,6 +52,72 @@ const parseRollValue = (rolls: string[], index: number): number | null => {
   return raw;
 };
 
+const normalizeInputValue = (value: string) => value.trim().toUpperCase();
+
+export const getEntryValidationMessage = (
+  frames: FrameInput[],
+  frameIndex: number,
+  rollIndex: number,
+  rawValue: string
+) => {
+  if (frameIndex >= 9) {
+    return null;
+  }
+
+  const frame = frames[frameIndex];
+  if (!frame) {
+    return null;
+  }
+
+  const normalized = normalizeInputValue(rawValue);
+
+  if (rollIndex === 0) {
+    if (normalized === '' || normalized === 'X' || /^[0-9]$/.test(normalized)) {
+      return null;
+    }
+    return `Frame ${frameIndex + 1} first roll must be 0-9 or X.`;
+  }
+
+  if (rollIndex === 1) {
+    if (normalized === '') {
+      return null;
+    }
+
+    const candidateRolls = [...frame.rolls];
+    candidateRolls[1] = rawValue;
+
+    const first = parseRollValue(frame.rolls, 0);
+    const second = parseRollValue(candidateRolls, 1);
+    const secondRaw = parseRawRoll(rawValue);
+
+    if (first === null) {
+      return null;
+    }
+
+    if (second === null) {
+      return `Frame ${frameIndex + 1} second roll must be 0-9 or /.`;
+    }
+
+    if (secondRaw === '/' && first === 10) {
+      return `Frame ${frameIndex + 1} spare is invalid after a strike.`;
+    }
+
+    if (secondRaw === '/' && first + second !== 10) {
+      return `Frame ${frameIndex + 1} spare must be entered as /.`;
+    }
+
+    if (secondRaw !== '/' && first + second > 10) {
+      return `Frame ${frameIndex + 1} total cannot exceed 10.`;
+    }
+
+    if (secondRaw !== '/' && first + second === 10) {
+      return null;
+    }
+  }
+
+  return null;
+};
+
 export const framesToRolls = (frames: FrameInput[]) => {
   const rolls: number[] = [];
 
@@ -188,7 +254,7 @@ export const validateFrames = (frames: FrameInput[]) => {
     const first = parseRollValue(frame.rolls, 0);
 
     if (first === null) {
-      return `Frame ${frameIndex + 1} first roll must be 0-10 or X.`;
+      return `Frame ${frameIndex + 1} first roll must be 0-9 or X.`;
     }
 
     if (!frame.rolls[1]?.trim()) {
@@ -197,13 +263,13 @@ export const validateFrames = (frames: FrameInput[]) => {
 
     const secondRaw = parseRawRoll(frame.rolls[1] ?? '');
     const second = parseRollValue(frame.rolls, 1);
-    if (second === null) {
-      return `Frame ${frameIndex + 1} second roll must be 0-10 or /.`;
+    if (second === null || second === undefined) {
+      return `Frame ${frameIndex + 1} second roll must be 0-9 or /.`;
     }
     if (first + second > 10) {
       return `Frame ${frameIndex + 1} total cannot exceed 10.`;
     }
-    if (secondRaw === '/' && first >= 10) {
+    if (secondRaw === '/' && first === 10) {
       return `Frame ${frameIndex + 1} spare is invalid after a strike.`;
     }
   }
