@@ -8,6 +8,23 @@ export default function App() {
     const doc = globalThis.document;
     if (doc) {
       doc.title = 'Bowling Score Sheet';
+      const titleTag = doc.querySelector('title');
+      if (titleTag) {
+        titleTag.textContent = 'Bowling Score Sheet';
+      }
+
+      const themeMeta = doc.querySelector('meta[name="theme-color"]');
+      if (themeMeta) {
+        themeMeta.setAttribute('content', '#f5f7fb');
+      }
+
+      const appleMeta = doc.querySelector('meta[name="apple-mobile-web-app-capable"]');
+      if (!appleMeta) {
+        const meta = doc.createElement('meta');
+        meta.setAttribute('name', 'apple-mobile-web-app-capable');
+        meta.setAttribute('content', 'yes');
+        doc.head.appendChild(meta);
+      }
     }
   }, []);
 

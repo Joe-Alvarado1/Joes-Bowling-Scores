@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Joe's Bowling Scores",
+    "name": "Bowling Score Sheet",
     "slug": "joes-bowling-scores",
     "version": "1.0.0",
     "platforms": [
@@ -8,8 +8,33 @@
       "android",
       "web"
     ],
+    "ios": {
+      "bundleIdentifier": "com.joesbowling.scores",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.joesbowling.scores"
+    },
     "runtimeVersion": {
       "policy": "sdkVersion"
+    },
+    "web": {
+      "name": "Bowling Score Sheet",
+      "shortName": "Bowling Score Sheet",
+      "themeColor": "#f5f7fb",
+      "backgroundColor": "#ffffff",
+      "display": "standalone",
+      "orientation": "portrait",
+      "startUrl": "/",
+      "scope": "/",
+      "lang": "en"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c06f9aa7-7fe0-404f-8b1b-8f076721214f"
+      }
     }
   }
 }
