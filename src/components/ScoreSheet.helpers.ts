@@ -4,7 +4,7 @@ export const normalizeRollValue = (value: string) => (value || '').trim().toUppe
 
 const isStrike = (v: string) => normalizeRollValue(v) === 'X';
 const isSpare = (v: string) => normalizeRollValue(v) === '/';
-const isMiss = (v: string) => normalizeRollValue(v) === '-';
+const isMiss = (v: string) => normalizeRollValue(v) === '-' || normalizeRollValue(v) === '0';
 const isDigit = (v: string) => /^[0-9]$/.test(normalizeRollValue(v));
 
 const toPins = (v: string): number => {
@@ -33,7 +33,8 @@ export const isFrameComplete = (frame: FrameInput, frameIndex: number): boolean 
 
   if (frameIndex < 9) {
     if (r0 === '' && r1 === 'X') return true; // strike
-    if (r0 !== '' && r1 !== '') return true;  // open or spare
+    if (r0 !== '' && r1 !== '') return true; // both rolls filled
+    if (r1 === '') 
     return false;
   }
 
@@ -99,8 +100,10 @@ export const applyRollEntry = (
         return frames;
       }
 
+      if (!isDigit(value) && !isMiss(value)) return currentFrames;
+
       // 0 auto-converts to -
-      frame.rolls[0] = value === '0' ? '-' : value;
+      frame.rolls[0] = value === '0' || value === '-' ? '-' : value;
       frame.rolls[1] = '';
       return frames;
     }
@@ -122,8 +125,8 @@ export const applyRollEntry = (
         return frames;
       }
 
-      // Digit/miss cannot exceed 10 with first roll
-      if (isDigit(value) || isMiss(value)) {
+      // Digits cannot exceed 10 with first roll
+      if (isDigit(value)) {
         if (first === '' || isStrike(first)) return currentFrames;
 
         const firstPins = toPins(first);
@@ -131,7 +134,12 @@ export const applyRollEntry = (
 
         if (firstPins + secondPins > 10) return currentFrames;
 
-        frame.rolls[1] = value === '0' ? '-' : value;
+        if (firstPins + secondPins === 10) {
+          frame.rolls[1] = '/';
+          return frames;
+        }
+
+        frame.rolls[1] = value === '0' || value === '-' ? '-' : value;
         return frames;
       }
     }
@@ -148,7 +156,7 @@ export const applyRollEntry = (
   if (rollIndex === 0) {
     if (isSpare(value)) return currentFrames;
 
-    frame.rolls[0] = value === '0' ? '-' : value;
+    frame.rolls[0] = value === '0' || value === '-' ? '-' : value;
     frame.rolls[1] = '';
     frame.rolls[2] = '';
     return frames;
@@ -161,7 +169,7 @@ export const applyRollEntry = (
     if (isStrike(r0)) {
       if (isSpare(value)) return currentFrames;
 
-      frame.rolls[1] = value === '0' ? '-' : value;
+      frame.rolls[1] = value === '0' || value === '-' ? '-' : value;
       frame.rolls[2] = '';
       return frames;
     }
@@ -173,13 +181,13 @@ export const applyRollEntry = (
       return frames;
     }
 
-    if (isDigit(value) || isMiss(value)) {
+    if (isDigit(value)) {
       const firstPins = toPins(r0);
       const secondPins = toPins(value === '0' ? '-' : value);
 
       if (firstPins + secondPins > 10) return currentFrames;
 
-      frame.rolls[1] = value === '0' ? '-' : value;
+      frame.rolls[1] = value === '0' || value === '-' ? '-' : value;
       frame.rolls[2] = '';
       return frames;
     }
