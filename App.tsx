@@ -7,7 +7,24 @@ export default function App() {
   useEffect(() => {
     const doc = globalThis.document;
     if (doc) {
-      doc.title = 'Bowling Score Sheet';
+      doc.title = 'Bowling Scores';
+
+      const themeMeta = doc.querySelector('meta[name="theme-color"]');
+      if (themeMeta) {
+        themeMeta.setAttribute('content', '#f5f7fb');
+      }
+
+      const appleMeta = doc.querySelector('meta[name="apple-mobile-web-app-capable"]');
+      if (!appleMeta) {
+        const meta = doc.createElement('meta');
+        meta.setAttribute('name', 'apple-mobile-web-app-capable');
+        meta.setAttribute('content', 'yes');
+        doc.head.appendChild(meta);
+      }
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+      }
     }
   }, []);
 
