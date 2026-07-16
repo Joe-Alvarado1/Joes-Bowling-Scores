@@ -21,10 +21,6 @@ export default function App() {
         meta.setAttribute('content', 'yes');
         doc.head.appendChild(meta);
       }
-
-      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-      }
     }
   }, []);
 
