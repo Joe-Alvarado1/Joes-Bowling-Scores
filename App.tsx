@@ -22,7 +22,7 @@ export default function App() {
         doc.head.appendChild(meta);
       }
 
-      if ('serviceWorker' in navigator) {
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => undefined);
       }
     }
