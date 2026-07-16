@@ -7,7 +7,11 @@ export default function App() {
   useEffect(() => {
     const doc = globalThis.document;
     if (doc) {
-      doc.title = 'Bowling Scores';
+      doc.title = 'Bowling Score Sheet';
+      const titleTag = doc.querySelector('title');
+      if (titleTag) {
+        titleTag.textContent = 'Bowling Score Sheet';
+      }
 
       const themeMeta = doc.querySelector('meta[name="theme-color"]');
       if (themeMeta) {

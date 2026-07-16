@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Joe's Bowling Scores",
+    "name": "Bowling Score Sheet",
     "slug": "joes-bowling-scores",
     "version": "1.0.0",
     "platforms": [
@@ -21,8 +21,8 @@
       "policy": "sdkVersion"
     },
     "web": {
-      "name": "Joe's Bowling Scores",
-      "shortName": "Bowling Scores",
+      "name": "Bowling Score Sheet",
+      "shortName": "Bowling Score Sheet",
       "themeColor": "#f5f7fb",
       "backgroundColor": "#ffffff",
       "display": "standalone",
