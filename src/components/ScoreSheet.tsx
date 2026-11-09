@@ -60,6 +60,11 @@ const ScoreSheet = () => {
   const validationMessage = useMemo(() => validateFrames(frames), [frames]);
   const displayValidationMessage = entryValidationMessage ?? validationMessage;
   const { total, frameScores } = useMemo(() => calculateBowlingScore(frames), [frames]);
+  const isScoreComplete = useMemo(
+    () => frames.every((frame, frameIndex) => isFrameComplete(frame, frameIndex)),
+    [frames]
+  );
+  const isSaveDisabled = isSaving || !isScoreComplete || Boolean(displayValidationMessage);
 
   const queueFocus = (fIndex: number, rIndex: number) => {
   globalThis.setTimeout(() => {
@@ -180,6 +185,11 @@ const ScoreSheet = () => {
   const saveToGoogleSheet = async () => {
     if (displayValidationMessage) {
       setSaveMessage('Fix the current validation errors before saving.');
+      return;
+    }
+
+    if (!isScoreComplete) {
+      setSaveMessage('Complete all frames before saving.');
       return;
     }
 
@@ -351,15 +361,21 @@ const getInputHandlers = (frameIndex: number, rollIndex: number) => {
             background: '#0f766e',
             color: '#fff',
             fontWeight: 700,
-            cursor: 'pointer',
+            cursor: isSaveDisabled ? 'not-allowed' : 'pointer',
+            opacity: isSaveDisabled ? 0.5 : 1,
             border: 'none',
           }}
-          disabled={isSaving}
+          disabled={isSaveDisabled}
         >
           {isSaving ? 'Saving…' : 'Save to Google Sheet'}
         </button>
       ) : (
-        <TouchableOpacity onPress={saveToGoogleSheet} style={[styles.button, styles.primaryButton]} activeOpacity={0.8} disabled={isSaving}>
+        <TouchableOpacity
+          onPress={saveToGoogleSheet}
+          style={[styles.button, styles.primaryButton, isSaveDisabled && styles.disabledButton]}
+          activeOpacity={0.8}
+          disabled={isSaveDisabled}
+        >
           <Text style={styles.buttonText}>{isSaving ? 'Saving…' : 'Save to Google Sheet'}</Text>
         </TouchableOpacity>
       )}
@@ -527,6 +543,9 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#0f766e',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   buttonText: {
     color: '#ffffff',
