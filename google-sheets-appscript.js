@@ -1,3 +1,4 @@
+/* exported doPost */
 const SHEET_NAME = 'Scores';
 
 function doPost(e) {

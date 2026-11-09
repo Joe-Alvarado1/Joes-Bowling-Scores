@@ -43,7 +43,8 @@ const ScoreSheet = () => {
   const [entryValidationMessage, setEntryValidationMessage] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const defaultWebhook =
-    typeof window !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    typeof globalThis.window !== 'undefined' &&
+    (globalThis.window.location.hostname === 'localhost' || globalThis.window.location.hostname === '127.0.0.1')
       ? 'http://127.0.0.1:3000/proxy'
       : getGoogleSheetWebhookUrlWithProxyFallback();
 
@@ -70,15 +71,6 @@ const ScoreSheet = () => {
     }
   }, 30);
 };
-
-  const focusInput = (fIndex: number, rIndex: number) => {
-    const ref = inputRefs.current?.[fIndex]?.[rIndex];
-    try {
-      ref?.focus?.();
-    } catch {
-      // ignore
-    }
-  };
 
   const getPrevPosition = (frameIndex: number, rollIndex: number) => {
     if (rollIndex > 0) {
@@ -214,10 +206,14 @@ const ScoreSheet = () => {
   // Ensure localhost development uses the local proxy and persist it
   useEffect(() => {
     try {
-      if (typeof window !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      if (
+        typeof globalThis.window !== 'undefined' &&
+        (globalThis.window.location.hostname === 'localhost' ||
+          globalThis.window.location.hostname === '127.0.0.1')
+      ) {
         const proxy = 'http://127.0.0.1:3000/proxy';
         setWebhookUrl(proxy);
-        window.localStorage.setItem('googleSheetWebhookUrl', proxy);
+        globalThis.window.localStorage.setItem('googleSheetWebhookUrl', proxy);
       }
     } catch {
       // ignore
@@ -225,17 +221,10 @@ const ScoreSheet = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem('googleSheetWebhookUrl', webhookUrl);
+    if (typeof globalThis.window !== 'undefined' && globalThis.window.localStorage) {
+      globalThis.window.localStorage.setItem('googleSheetWebhookUrl', webhookUrl);
     }
   }, [webhookUrl]);
-
-  // Temporary test hook: allow triggering the save from the browser console
-  useEffect(() => {
-    // no-op: removed debug trigger in production
-  }, [frames, total, webhookUrl]);
-
-  // debug hooks removed
 
   useEffect(() => {
     if (pendingFocusRef.current) {
@@ -354,7 +343,7 @@ const getInputHandlers = (frameIndex: number, rollIndex: number) => {
 
       {Platform.OS === 'web' ? (
         <button
-          onClick={() => { try { saveToGoogleSheet(); } catch {} }}
+          onClick={saveToGoogleSheet}
           style={{
             marginTop: 20,
             padding: '14px 18px',

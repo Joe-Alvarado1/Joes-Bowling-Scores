@@ -26,6 +26,29 @@ export default [
   },
 
   {
+    files: ["google-sheets-appscript.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        ContentService: "readonly",
+        SpreadsheetApp: "readonly",
+      },
+    },
+  },
+
+  {
+    files: ["tools/proxy/**/*.js"],
+    languageOptions: {
+      sourceType: "script",
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        require: "readonly",
+      },
+    },
+  },
+
+  {
     files: [
       "**/*.test.ts",
       "**/*.test.tsx",

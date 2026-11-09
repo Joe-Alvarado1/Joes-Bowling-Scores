@@ -25,8 +25,8 @@ export const getGoogleSheetWebhookUrl = () => {
     return envValue;
   }
 
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage.getItem('googleSheetWebhookUrl') ?? '';
+  if (typeof globalThis.window !== 'undefined' && globalThis.window.localStorage) {
+    return globalThis.window.localStorage.getItem('googleSheetWebhookUrl') ?? '';
   }
 
   return '';
@@ -46,13 +46,16 @@ export const getGoogleSheetWebhookUrlWithProxyFallback = () => {
 
   if (webhookEnv) return webhookEnv;
 
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const stored = window.localStorage.getItem('googleSheetWebhookUrl');
+  if (typeof globalThis.window !== 'undefined' && globalThis.window.localStorage) {
+    const stored = globalThis.window.localStorage.getItem('googleSheetWebhookUrl');
     if (stored) return stored;
 
     // local dev convenience: if running in browser and no webhook configured, use local proxy
     // only use this as a fallback for development/testing
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    if (
+      globalThis.window.location.hostname === 'localhost' ||
+      globalThis.window.location.hostname === '127.0.0.1'
+    ) {
       return 'http://127.0.0.1:3000/proxy';
     }
   }
@@ -72,17 +75,12 @@ export const saveScoreToGoogleSheet = async (
     throw new Error('Google Sheet endpoint must be an HTTP(S) URL.');
   }
 
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   const timeoutMs = 10000; // 10s timeout
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    // Debug: log endpoint before attempting fetch (helps diagnose 'Failed to fetch')
-    try {
-      console.debug('GoogleSheets: POST', endpointUrl, 'payload:', payload);
-    } catch {}
-
-    const response = await fetch(endpointUrl, {
+    const response = await globalThis.fetch(endpointUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -92,7 +90,7 @@ export const saveScoreToGoogleSheet = async (
       signal: controller.signal,
     });
 
-    clearTimeout(timeout);
+    globalThis.clearTimeout(timeout);
 
     if (!response.ok) {
       const body = await response.text();
@@ -100,18 +98,15 @@ export const saveScoreToGoogleSheet = async (
     }
 
     return response;
-  } catch (err: any) {
-    clearTimeout(timeout);
-    // Log full error for debugging in browser console
-    try {
-      console.error('GoogleSheets: save error', err);
-    } catch {}
+  } catch (error: unknown) {
+    globalThis.clearTimeout(timeout);
 
-    if (err && err.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Network timeout when saving to Google Sheets.');
     }
 
-    const details = `${err?.name ?? 'Error'}: ${err?.message ?? String(err)}`;
+    const details =
+      error instanceof Error ? `${error.name}: ${error.message}` : `Error: ${String(error)}`;
     throw new Error(`Failed to save to Google Sheets: ${details}`);
   }
 };
