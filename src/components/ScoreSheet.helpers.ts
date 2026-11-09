@@ -151,7 +151,6 @@ export const applyRollEntry = (
   // 10th Frame
   // ----------------------------
   const r0 = normalizeRollValue(frame.rolls[0] ?? '');
-  const r1 = normalizeRollValue(frame.rolls[1] ?? '');
 
   if (rollIndex === 0) {
     if (isSpare(value)) return currentFrames;

@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Platform } from 'react-native';
 import { calculateBowlingScore, getEntryValidationMessage, validateFrames } from '../utils/scoring';
+import { buildGoogleSheetPayload, getGoogleSheetWebhookUrlWithProxyFallback, saveScoreToGoogleSheet } from '../utils/googleSheets';
 import { FrameInput } from '../types';
 import {
   applyRollEntry,
@@ -39,6 +41,15 @@ const getDisplayRoll = (frame: FrameInput, frameIndex: number, rollIndex: number
 const ScoreSheet = () => {
   const [frames, setFrames] = useState<FrameInput[]>(initialFrames);
   const [entryValidationMessage, setEntryValidationMessage] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const defaultWebhook =
+    typeof globalThis.window !== 'undefined' &&
+    (globalThis.window.location.hostname === 'localhost' || globalThis.window.location.hostname === '127.0.0.1')
+      ? 'http://127.0.0.1:3000/proxy'
+      : getGoogleSheetWebhookUrlWithProxyFallback();
+
+  const [webhookUrl, setWebhookUrl] = useState<string>(defaultWebhook);
+  const [isSaving, setIsSaving] = useState(false);
 
   const inputRefs = useRef<Array<Array<TextInput | null>>>(
     Array.from({ length: 10 }, () => Array.from({ length: 3 }, () => null))
@@ -60,15 +71,6 @@ const ScoreSheet = () => {
     }
   }, 30);
 };
-
-  const focusInput = (fIndex: number, rIndex: number) => {
-    const ref = inputRefs.current?.[fIndex]?.[rIndex];
-    try {
-      ref?.focus?.();
-    } catch {
-      // ignore
-    }
-  };
 
   const getPrevPosition = (frameIndex: number, rollIndex: number) => {
     if (rollIndex > 0) {
@@ -175,9 +177,54 @@ const ScoreSheet = () => {
     queueFocus(0, 0);
   };
 
+  const saveToGoogleSheet = async () => {
+    if (displayValidationMessage) {
+      setSaveMessage('Fix the current validation errors before saving.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      const payload = buildGoogleSheetPayload(frames, total);
+      await saveScoreToGoogleSheet(payload, webhookUrl);
+      setSaveMessage('Score saved to Google Sheet.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save score.';
+      setSaveMessage(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+
   useEffect(() => {
     queueFocus(0, 0);
   }, []);
+
+  // Ensure localhost development uses the local proxy and persist it
+  useEffect(() => {
+    try {
+      if (
+        typeof globalThis.window !== 'undefined' &&
+        (globalThis.window.location.hostname === 'localhost' ||
+          globalThis.window.location.hostname === '127.0.0.1')
+      ) {
+        const proxy = 'http://127.0.0.1:3000/proxy';
+        setWebhookUrl(proxy);
+        globalThis.window.localStorage.setItem('googleSheetWebhookUrl', proxy);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof globalThis.window !== 'undefined' && globalThis.window.localStorage) {
+      globalThis.window.localStorage.setItem('googleSheetWebhookUrl', webhookUrl);
+    }
+  }, [webhookUrl]);
 
   useEffect(() => {
     if (pendingFocusRef.current) {
@@ -186,6 +233,8 @@ const ScoreSheet = () => {
       queueFocus(frameIndex, rollIndex);
     }
   }, [frames]);
+
+  // No DOM-capture handlers — use platform-appropriate button rendering below.
 
   type KeyPressEvent = NativeSyntheticEvent<{ key: string }>;
 
@@ -283,9 +332,43 @@ const getInputHandlers = (frameIndex: number, rollIndex: number) => {
         {displayValidationMessage ? <Text style={styles.validation}>{displayValidationMessage}</Text> : null}
       </View>
 
+      <TextInput
+        style={styles.webhookInput}
+        value={webhookUrl}
+        onChangeText={setWebhookUrl}
+        placeholder="https://script.google.com/macros/s/AKfycbzSYaNB9unAhodtoNwsPhmEUPaG_b4LPhj1Bshpg4sXoRpNJfg_QsGuCFZ1IgMVZpsg/exec"
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+
+      {Platform.OS === 'web' ? (
+        <button
+          onClick={saveToGoogleSheet}
+          style={{
+            marginTop: 20,
+            padding: '14px 18px',
+            borderRadius: 14,
+            background: '#0f766e',
+            color: '#fff',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: 'none',
+          }}
+          disabled={isSaving}
+        >
+          {isSaving ? 'Saving…' : 'Save to Google Sheet'}
+        </button>
+      ) : (
+        <TouchableOpacity onPress={saveToGoogleSheet} style={[styles.button, styles.primaryButton]} activeOpacity={0.8} disabled={isSaving}>
+          <Text style={styles.buttonText}>{isSaving ? 'Saving…' : 'Save to Google Sheet'}</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity onPress={reset} style={styles.button} activeOpacity={0.8}>
         <Text style={styles.buttonText}>Reset Sheet</Text>
       </TouchableOpacity>
+
+      {saveMessage ? <Text style={styles.saveMessage}>{saveMessage}</Text> : null}
     </ScrollView>
   );
 };
@@ -442,9 +525,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb',
     alignItems: 'center',
   },
+  primaryButton: {
+    backgroundColor: '#0f766e',
+  },
   buttonText: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  webhookInput: {
+    marginTop: 20,
+    marginBottom: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  saveMessage: {
+    marginTop: 12,
+    color: '#0f766e',
+    fontWeight: '600',
   },
 });
 

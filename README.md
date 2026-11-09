@@ -16,6 +16,17 @@ A React Native mobile score tracker built with TypeScript.
 3. Run `npm start`
 4. Open the app on a phone or simulator with Expo
 
+## Save scores to Google Sheets locally
+
+The browser app uses a local proxy to avoid Google Apps Script CORS restrictions. In a second terminal, install and start it:
+
+```bash
+npm --prefix tools/proxy install
+npm --prefix tools/proxy start
+```
+
+Keep the proxy running while saving scores. Configure `tools/proxy/.env` with the deployed Apps Script `/exec` URL as `TARGET_URL`.
+
 ## Notes
 
 - Frames 1-9 use two rolls.
